@@ -1,0 +1,15 @@
+{
+  "lang": "en-US",
+  "name": "Optimal τ",
+  "short_name": "Optimal τ",
+  "scope": ".",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "any",
+  "theme_color": "#107028",
+  "background_color": "#107028",
+  "icons": [
+    {"src": "logo.svg", "sizes": "any", "type": "image/svg+xml"},
+    {"src": "logo.ico", "type": "image/x-ixon"}
+  ]
+}

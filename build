@@ -1,0 +1,166 @@
+#! /usr/bin/env python3
+#
+# Copyright (c) 2017 Joost van Zwieten
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+import sys
+import math
+import pathlib
+import tempfile
+import subprocess
+import functools
+import colorsys
+
+
+def create_logo_svg(dst, tau, fmin, fmax, n_freqs, eps, size=128, main_circle_line_width=4, freq_circle_line_width=4, freq_dot_radius=6):
+    print('building {}'.format(dst))
+    with dst.open('w') as f:
+        p = functools.partial(print, file=f)
+
+        main_circle_radius = (128-max(2*freq_dot_radius, main_circle_line_width))//2
+
+        p('<?xml version="1.0" encoding="utf-8" standalone="no"?>')
+        p('<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="-{hs} -{hs} {s} {s}" width="{s}" height="{s}">'.format(s=size, hs=size//2))
+        p('  <circle cx="0" cy="0" r="{}" fill="white" stroke="none"/>'.format(main_circle_radius))
+
+        # Compute main circle.
+        C = 1j*eps*abs(tau)**2/(2*tau.imag*(tau.imag+eps*tau.real))
+        R = math.sqrt(abs(tau)**2*(eps**2+1)/(4*(tau.imag+eps*tau.real)**2))
+        scale = main_circle_radius / R
+
+        # Draw frequency circles.
+        dots = []
+        r = abs(tau) / abs(2*tau.imag)
+        for i in range(n_freqs):
+            freq = fmin+i*(fmax-fmin)/(n_freqs-1)
+            omega = 2*math.pi*freq*(1 - 1j*eps)
+            eta = omega / (omega - tau)
+            c = 1/2 + 1j*tau.real/(2*tau.imag) - eta
+            color = '#{:02x}{:02x}{:02x}'.format(*(max(0, min(255, round(x*255))) for x in colorsys.hsv_to_rgb(i/n_freqs, 0.5, 0.75)))
+            angle = math.atan2((c-C).imag, (c-C).real)
+            delta = 2*math.asin(r/(2*R))
+            format_args = dict(
+                cx=(c-C).real*scale, cy=-(c-C).imag*scale,
+                rc=r*scale, color=color, rd=freq_dot_radius,
+                sw=freq_circle_line_width,
+                x0=math.cos(angle+delta)*main_circle_radius,
+                x1=math.cos(angle-delta)*main_circle_radius,
+                y0=-math.sin(angle+delta)*main_circle_radius,
+                y1=-math.sin(angle-delta)*main_circle_radius,
+            )
+            dots.append('  <circle cx="{cx}" cy="{cy}" r="{rd}" fill="{color}" stroke="none"/>'.format(**format_args))
+            p('  <path d="M {x0} {y0} A {rc} {rc} 0 0 0 {x1} {y1}" fill="none" stroke="{color}" stroke-width="{sw}"/>'.format(**format_args))
+
+        p('  <circle cx="0" cy="0" r="{}" fill="none" stroke="black" stroke-width="{}"/>'.format(main_circle_radius, main_circle_line_width))
+        tuple(map(p, dots))
+        # Draw τ (from Noto Serif).
+        p('  <path transform="scale(2.8) translate(-20,-277)" fill="black" stroke="none" d="m 30.298926,268.30095 h -9.004102 q -0.992187,5.10977 -1.513086,9.22735 -0.520898,4.09277 -0.520898,6.77168 0,1.28984 0.297656,2.23242 0.297657,0.91777 0.79375,1.48828 0.496094,0.57051 1.165821,0.84336 0.669726,0.27285 1.413867,0.27285 0.942578,0 1.95957,-0.19844 1.016992,-0.22324 1.885156,-0.57051 v 2.23243 q -0.471289,0.29765 -0.992187,0.52089 -0.496094,0.22325 -1.116211,0.37207 -0.620117,0.14883 -1.389063,0.22325 -0.74414,0.0992 -1.711523,0.0992 -3.447852,0 -5.109766,-1.78594 -1.661914,-1.78594 -1.661914,-5.01055 0,-1.6123 0.297657,-3.47265 0.297656,-1.88516 0.818554,-3.96875 0.520899,-2.1084 1.190625,-4.41524 0.694531,-2.33164 1.463477,-4.86172 h -4.737695 q -1.116211,0 -1.885157,0.34727 -0.74414,0.32246 -1.190625,0.91777 -0.446484,0.59531 -0.644922,1.38906 -0.1736323,0.76895 -0.1736323,1.66192 H 7.8010746 q 0,-2.30684 0.471289,-3.91914 0.4712891,-1.61231 1.3146484,-2.6293 0.868164,-1.0418 2.083594,-1.51309 1.215429,-0.47128 2.678906,-0.47128 h 15.949414 z"/>')
+        p('</svg>')
+
+
+def svg_to_png(src, dst, size):
+    print('{} -> rasterize@{} -> {}'.format(src, size, dst))
+    src = pathlib.Path(src)
+    dst = pathlib.Path(dst)
+    subprocess.run(['rsvg-convert', '-w', str(size), '-h', str(size), '-o', str(dst), str(src)], check=True)
+
+
+def svg_to_ico(src, dst):
+    sizes = 16, 32, 48, 64, 96, 128, 256
+    print('{} -> rasterize@{} -> {}'.format(src, ','.join(map(str, sizes)), dst))
+    src = pathlib.Path(src)
+    dst = pathlib.Path(dst)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = pathlib.Path(tmpdir)
+        for size in sizes:
+            subprocess.run(['rsvg-convert', '-w', str(size), '-h', str(size), '-o', str(tmpdir / '{}.png'.format(size)), str(src)], check=True)
+        subprocess.run(['convert', *(str(tmpdir / '{}.png'.format(size)) for size in sizes), str(dst)], check=True)
+
+
+def git(*args, cwd=None, check=True, stderr=None):
+    print(' '.join(['git', *args]))
+    if cwd is not None:
+        cwd = str(cwd)
+    proc = subprocess.run(['git', *args], stdout=subprocess.PIPE, stderr=stderr, stdin=subprocess.DEVNULL, universal_newlines=True, check=check, cwd=cwd)
+    return proc.stdout
+
+
+def git_rev_parse(name, *, cwd=None):
+    try:
+        return git('rev-parse', name, cwd=cwd, stderr=subprocess.DEVNULL).strip()
+    except subprocess.CalledProcessError:
+        pass
+
+
+def build_here(*, root=pathlib.Path(__file__).parent):
+    root = pathlib.Path(root)
+    svg = root / 'logo.svg'
+    png256 = root / 'logo-256.png'
+    ico = root / 'logo.ico'
+    create_logo_svg(svg, tau=8-25j, fmin=1, fmax=9, n_freqs=5, eps=0.5)
+    svg_to_png(svg, png256, 256)
+    svg_to_ico(svg, ico)
+    return svg, ico
+
+
+def build_gh_pages():
+    target = 'gh-pages'
+    source_commit = git_rev_parse('HEAD')
+    assert source_commit
+    target_commit = git_rev_parse(target)
+    if target_commit and target_commit == source_commit:
+        print('ERROR: cannot build gh-pages from gh-pages', file=sys.stderr)
+        raise SystemExit(1)
+    if git('status', '--porcelain').strip():
+        print('ERROR: worktree not clean', file=sys.stderr)
+        raise SystemExit(1)
+    try:
+        with tempfile.TemporaryDirectory(prefix='tmp-gh-pages-') as tmpdir:
+            tmpdir = pathlib.Path(tmpdir)
+            git('worktree', 'add', str(tmpdir), source_commit)
+            if target_commit:
+                git('merge', target_commit, '--allow-unrelated-histories', '--strategy', 'ours', cwd=tmpdir)
+            files = build_here(root=tmpdir)
+            git('rm', '.gitignore', cwd=tmpdir)
+            git('add', *(str(f.relative_to(tmpdir)) for f in files), cwd=tmpdir)
+            git('commit', *(['--amend'] if target_commit else []), '--message', 'build {}'.format(source_commit), cwd=tmpdir)
+            new_target_commit = git_rev_parse('HEAD', cwd=tmpdir)
+            if target_commit:
+                git('checkout', '--quiet', target, cwd=tmpdir)
+                git('merge', '--ff-only', new_target_commit, cwd=tmpdir)
+            else:
+                git('branch', target, cwd=tmpdir)
+    finally:
+        git('worktree', 'prune')
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.set_defaults(cmd=build_here)
+    subparsers = parser.add_subparsers()
+    parser_here = subparsers.add_parser('here')
+    parser_here.set_defaults(cmd=build_here)
+    parser_gh_pages = subparsers.add_parser('gh-pages')
+    parser_gh_pages.set_defaults(cmd=build_gh_pages)
+    args = parser.parse_args()
+    args.cmd()
+
+# vim: sts=4:sw=4:et
