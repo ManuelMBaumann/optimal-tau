@@ -529,7 +529,7 @@ window.addEventListener('load', function()
   row = append_control(controls, row, 'τ imag', parseFloat, 'tau_imag', true);
   row = append_control(controls, row, 'fmin', parseFloat, 'fmin', false);
   row = append_control(controls, row, 'fmax', parseFloat, 'fmax', false);
-  row = append_control(controls, row, 'n freqs', parseInt, 'n_freqs', false);
+  row = append_control(controls, row, 'n_freqs', parseInt, 'n_freqs', false);
   row = append_control(controls, row, 'eps', parseFloat, 'eps', false);
   document.body.appendChild(controls);
 
