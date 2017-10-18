@@ -414,6 +414,42 @@ function append_control(container, row, label, parser, key, affects_optimality)
   return row + 1;
 }
 
+
+function append_outputs(container, row, label, parser, key, affects_optimality)
+{
+  let el_background = document.createElement('div');
+  el_background.id = 'background_'+key;
+  el_background.classList.add('background');
+  el_background.style.gridColumn = '1 / 3';
+  el_background.style.gridRow = row;
+  el_background.addEventListener('pointerdown', select_control.bind(null, key, affects_optimality));
+
+  let el_label = document.createElement('div');
+  el_label.id = 'label_'+key;
+  el_label.classList.add('label');
+  el_label.innerText = label;
+  el_label.style.color = 'gray';
+  el_label.style.gridColumn = 1;
+  el_label.style.gridRow = row;
+  el_label.addEventListener('pointerdown', select_control.bind(null, key, affects_optimality));
+
+  let el_control = document.createElement('input');
+  el_control.id = 'control_'+key;
+  el_control.type = 'number';
+  el_control.step = parser == parseFloat ? 'any' : 1;
+  el_control.value = window.settings[key];
+  el_control.style.gridColumn = 2;
+  el_control.style.gridRow = row;
+  el_control.addEventListener('change', update_settings.bind(null, parser, key, affects_optimality));
+  el_control.addEventListener('focus', ignore_event_wrapper(deselect_controls));
+
+  container.appendChild(el_background);
+  container.appendChild(el_label);
+  container.appendChild(el_control);
+
+  return row + 1;
+}
+
 function update_settings(parser, key, affects_optimality, e)
 {
   if (affects_optimality)
@@ -507,6 +543,7 @@ function update_optimal_tau()
   }
   document.getElementById('control_J').value = J(omk, {real:window.settings.tau_real, imag:window.settings.tau_imag});
   document.getElementById('control_Jopt').value = J_opt(window.settings.eps, 2.0*Math.PI*window.settings.fmin, 2.0*Math.PI*window.settings.fmax);
+  document.getElementById('control_Jopt').style.color = 'gray';
 
   // display values
   if (document.getElementById('optimal').classList.contains('not'))
@@ -561,9 +598,8 @@ window.addEventListener('load', function()
   outputs.classList.add('sidebar');
   row = 1;
   row = append_control(outputs, row, 'J(τ)'+'\xa0'+' = ', parseFloat, 'J', true);
-  row = append_control(outputs, row, 'J(τ*) = ', parseFloat, 'Jopt', true);
+  row = append_outputs(outputs, row, 'J(τ*) = ', parseFloat, 'Jopt', true);
   outputs.style.fontSize = "large";
-
 
   document.body.appendChild(outputs);
 
