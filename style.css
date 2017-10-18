@@ -19,11 +19,10 @@ html, body
   height: 100%;
 }
 
-#controls
+#controls, #outputs
 {
   position: fixed;
   top: 76px;
-  right: 51px;
   background: hsla(0, 0%, 100%, 0.8);
   display: grid;
   grid-gap: 0px;
@@ -32,64 +31,74 @@ html, body
   font-size: 12px;
 }
 
-#controls input
+#controls
+{
+  right: 51px;
+}
+
+#outputs
+{
+  left: 51px;
+}
+
+.sidebar input
 {
   grid-column: 2;
-  width: 50px;
+  width: 52px;
   border: none;
   background: none;
   font: inherit;
   transition: border-bottom-color 0.25s;
 }
 
-#controls .label, #controls input
+.sidebar .label, .sidebar input
 {
   margin: 5px;
 }
 
-#controls .background, #controls .label
+.sidebar .background, .sidebar .label
 {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
-#controls .background
+.sidebar .background
 {
   transition: background 0.25s;
   border-radius: 2px;
 }
 
-#controls .background.error
+.sidebar .background.error
 {
   background: hsla(0, 100%, 50%, 0.5);
 }
 
-#controls .background.selected
+.sidebar .background.selected
 {
   background: hsla(210, 100%, 50%, 0.8);
 }
 
-#controls input:focus
+.sidebar input:focus
 {
   outline: none;
   border-bottom-color: hsla(210, 100%, 50%, 0.8);
 }
 
 /* see https://stackoverflow.com/a/27935448 */
-#controls input[type="number"]::-webkit-outer-spin-button,
-#controls input[type="number"]::-webkit-inner-spin-button
+.sidebar input[type="number"]::-webkit-outer-spin-button,
+.sidebar input[type="number"]::-webkit-inner-spin-button
 {
   -webkit-appearance: none;
   margin: 0;
 }
 
 /* see https://stackoverflow.com/a/23374725 */
-#controls input[type="number"]
+.sidebar input[type="number"]
 {
   -moz-appearance: textfield;
 }
 
-#controls .label
+.sidebar .label
 {
   user-select: none;
 }
