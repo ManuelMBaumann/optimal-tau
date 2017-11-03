@@ -281,14 +281,31 @@ function redraw()
     ctx.strokeStyle = item.color;
     for (let line of item.lines)
     {
+      
       ctx.beginPath();
       if (line.x !== undefined)
       {
+        if ( (line.x-drawing.width/2) > -10 && (line.x-drawing.width/2) < 10)
+        {
+        ctx.strokeStyle = '#000';
+        }
+        else
+        {
+        ctx.strokeStyle = item.color;
+        }
         ctx.moveTo(line.x, 0);
         ctx.lineTo(line.x, drawing.height);
       }
       else
       {
+	if ( line.y == 0)
+        {
+        ctx.strokeStyle = '#000';
+        }
+        else
+        {
+        ctx.strokeStyle = item.color;
+        }
         ctx.moveTo(0, line.y);
         ctx.lineTo(drawing.width, line.y);
       }
