@@ -287,7 +287,7 @@ function redraw()
       {
         if ( (line.x-drawing.width/2) > -10 && (line.x-drawing.width/2) < 10)
         {
-        ctx.strokeStyle = '#000';
+        //ctx.strokeStyle = '#000'; // print y-axis
         }
         else
         {
