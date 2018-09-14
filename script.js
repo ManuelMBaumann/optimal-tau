@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Joost van Zwieten
+// Copyright (c) 2017 Joost van Zwieten and Manuel Baumann
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -129,7 +129,7 @@ function J(om, tau)
   for (let k = 0; k < om.length; k++)
   {
     let etak = cdiv(om[k], csub(om[k], tau));
-    let ck = csub({real: 1/2, imag: tau.real / (2*tau.imag)}, etak);
+    let ck = csub({real: 0.5, imag: tau.real / (2*tau.imag)}, etak);
     Jval.push(r / cabs(ck));
   }
   return Math.max.apply(null, Jval);
@@ -138,6 +138,11 @@ function J(om, tau)
 function om(freq, eps)
 {
   return {real: 2*Math.PI*freq, imag: -2*Math.PI*freq*eps};
+}
+
+function add_damping(freq, eps)
+{
+  return {real: freq, imag: -eps*freq};
 }
 
 // DRAWING //
@@ -276,14 +281,31 @@ function redraw()
     ctx.strokeStyle = item.color;
     for (let line of item.lines)
     {
+      
       ctx.beginPath();
       if (line.x !== undefined)
       {
+        if ( (line.x-drawing.width/2) > -10 && (line.x-drawing.width/2) < 10)
+        {
+        //ctx.strokeStyle = '#000'; // print y-axis
+        }
+        else
+        {
+        ctx.strokeStyle = item.color;
+        }
         ctx.moveTo(line.x, 0);
         ctx.lineTo(line.x, drawing.height);
       }
       else
       {
+	if ( line.y == 0)
+        {
+        ctx.strokeStyle = '#000';
+        }
+        else
+        {
+        ctx.strokeStyle = item.color;
+        }
         ctx.moveTo(0, line.y);
         ctx.lineTo(drawing.width, line.y);
       }
@@ -337,6 +359,12 @@ function redraw()
     if (drawing.height-Math.round((i*i_scale-offset.y)*scale) >= margin.top && drawing.height-Math.round((i*i_scale-offset.y)*scale) <= drawing.height-margin.bottom)
       ctx.fillText(fmt_float(i*i_scale, -1-i_scale_power), Math.round(margin.left-10), drawing.height-Math.round((i*i_scale-offset.y)*scale));
 
+  
+//   ctx.beginPath();
+  ctx.moveTo(margin.left,0);
+  ctx.lineTo(margin.right,0);  
+  ctx.stroke();
+  
 //ctx.font = `${Math.round(32*dpr)}px 'Noto Serif', serif`;
 //ctx.textAlign = 'center';
 //ctx.textBaseline = 'middle';
@@ -382,6 +410,42 @@ function append_control(container, row, label, parser, key, affects_optimality)
   el_label.id = 'label_'+key;
   el_label.classList.add('label');
   el_label.innerText = label;
+  el_label.style.gridColumn = 1;
+  el_label.style.gridRow = row;
+  el_label.addEventListener('pointerdown', select_control.bind(null, key, affects_optimality));
+
+  let el_control = document.createElement('input');
+  el_control.id = 'control_'+key;
+  el_control.type = 'number';
+  el_control.step = parser == parseFloat ? 'any' : 1;
+  el_control.value = window.settings[key];
+  el_control.style.gridColumn = 2;
+  el_control.style.gridRow = row;
+  el_control.addEventListener('change', update_settings.bind(null, parser, key, affects_optimality));
+  el_control.addEventListener('focus', ignore_event_wrapper(deselect_controls));
+
+  container.appendChild(el_background);
+  container.appendChild(el_label);
+  container.appendChild(el_control);
+
+  return row + 1;
+}
+
+
+function append_outputs(container, row, label, parser, key, affects_optimality)
+{
+  let el_background = document.createElement('div');
+  el_background.id = 'background_'+key;
+  el_background.classList.add('background');
+  el_background.style.gridColumn = '1 / 3';
+  el_background.style.gridRow = row;
+  el_background.addEventListener('pointerdown', select_control.bind(null, key, affects_optimality));
+
+  let el_label = document.createElement('div');
+  el_label.id = 'label_'+key;
+  el_label.classList.add('label');
+  el_label.innerText = label;
+  el_label.style.color = 'gray';
   el_label.style.gridColumn = 1;
   el_label.style.gridRow = row;
   el_label.addEventListener('pointerdown', select_control.bind(null, key, affects_optimality));
@@ -487,6 +551,18 @@ function toggle_optimality()
 
 function update_optimal_tau()
 {
+  // compute J, Jopt
+  let f = linspace(2.0*Math.PI*window.settings.fmin, 2.0*Math.PI*window.settings.fmax, window.settings.n_freqs)
+  let omk = []
+  for (let k = 0; k < window.settings.n_freqs; k++)
+  {
+  	omk.push( add_damping(f[k], window.settings.eps) )
+  }
+  document.getElementById('control_J').value = J(omk, {real:window.settings.tau_real, imag:window.settings.tau_imag});
+  document.getElementById('control_Jopt').value = J_opt(window.settings.eps, 2.0*Math.PI*window.settings.fmin, 2.0*Math.PI*window.settings.fmax);
+  document.getElementById('control_Jopt').style.color = 'gray';
+
+  // display values
   if (document.getElementById('optimal').classList.contains('not'))
     return;
   let tau = opt_tau_anal(window.settings.eps, 2*Math.PI*window.settings.fmin, 2*Math.PI*window.settings.fmax);
@@ -524,14 +600,25 @@ window.addEventListener('load', function()
 
   let controls = document.createElement('div');
   controls.id = 'controls';
+  controls.classList.add('sidebar');
   let row = 1;
   row = append_control(controls, row, 'τ real', parseFloat, 'tau_real', true);
   row = append_control(controls, row, 'τ imag', parseFloat, 'tau_imag', true);
   row = append_control(controls, row, 'fmin', parseFloat, 'fmin', false);
   row = append_control(controls, row, 'fmax', parseFloat, 'fmax', false);
   row = append_control(controls, row, 'n_freqs', parseInt, 'n_freqs', false);
-  row = append_control(controls, row, 'eps', parseFloat, 'eps', false);
+  row = append_control(controls, row, 'damping', parseFloat, 'eps', false);
   document.body.appendChild(controls);
+  
+  let outputs = document.createElement('div');
+  outputs.id = 'outputs';
+  outputs.classList.add('sidebar');
+  row = 1;
+  row = append_control(outputs, row, 'J(τ)'+'\xa0'+' = ', parseFloat, 'J', true);
+  row = append_outputs(outputs, row, 'J(τ*) = ', parseFloat, 'Jopt', true);
+  outputs.style.fontSize = "large";
+
+  document.body.appendChild(outputs);
 
   document.body.addEventListener('pointerdown', start_slide);
   document.body.addEventListener('pointerup', stop_slide);
@@ -544,6 +631,8 @@ window.addEventListener('load', function()
   footer_link.appendChild(document.createTextNode('Baumann and Van Gijzen (2017)'));
   footer.appendChild(footer_link);
   document.body.appendChild(footer);
+
+  update_optimal_tau();
 
   window.matchMedia('print').addListener(function(mql)
   {
