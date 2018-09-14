@@ -540,8 +540,7 @@ window.addEventListener('load', function()
   footer.id = 'footer';
   footer.appendChild(document.createTextNode('details: '));
   let footer_link = document.createElement('a');
-  // TODO: replace with 'https://doi.org/...' as soon as the official paper has been published
-  footer_link.href = 'http://ta.twi.tudelft.nl/nw/users/mmbaumann/projects/tech_rep4a.pdf';
+  footer_link.href = 'https://doi.org/10.1016/j.apnum.2018.08.020';
   footer_link.appendChild(document.createTextNode('Baumann and Van Gijzen (2017)'));
   footer.appendChild(footer_link);
   document.body.appendChild(footer);
