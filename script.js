@@ -628,7 +628,7 @@ window.addEventListener('load', function()
   footer.appendChild(document.createTextNode('details: '));
   let footer_link = document.createElement('a');
   footer_link.href = 'https://doi.org/10.1016/j.apnum.2018.08.020';
-  footer_link.appendChild(document.createTextNode('Baumann and Van Gijzen (2017)'));
+  footer_link.appendChild(document.createTextNode('Baumann and Van Gijzen (2018)'));
   footer.appendChild(footer_link);
   document.body.appendChild(footer);
 
